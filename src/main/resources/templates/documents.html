@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
+    <link rel="stylesheet" href="/css/main.css">
+    <meta charset="UTF-8">
+    <title>Documents</title>
+</head>
+<body>
+
+<div th:replace="fragments/header :: header"></div>
+<div th:replace="fragments/page-title :: page-title ('Documents Administrative Page')"></div>
+
+<br><br>
+
+<div class="container" id="main">
+
+    <form v-on:submit.prevent="postDocument">
+        <div class="card mb-auto">
+            <div aria-controls="documentForm" aria-expanded="false" class="card-header" data-target="#documentForm"
+                 data-toggle="collapse" id="formHeader" style="cursor: pointer">
+                <div class="float-left">Новый документ</div>
+                <div class="float-right">+</div>
+            </div>
+            <div class="card card-body collapse" id="documentForm">
+                <div class="form-group row">
+                    <label for="documentTitle" class="col-sm-4 col-form-label">Title</label>
+                    <input id="document_id" type="hidden" v-model="document_id">
+                    <input id="documentTitle" class="form-control col-sm-8" placeholder="Document Title" type="text"
+                           v-model="document_title"/>
+                </div>
+                <div class="form-group row">
+                    <label for="documentAuthor" class="col-sm-4 col-form-label">Author</label>
+                    <input id="documentAuthor" class="form-control col-sm-8" placeholder="Author" type="text"
+                           v-model="document_author"/>
+                </div>
+                <div class="form-group row">
+                    <label for="documentDate" class="col-sm-4 col-form-label">Date</label>
+                    <input id="documentDate" class="form-control col-sm-8" type="date" v-model="document_date"/>
+                </div>
+                <div class="form-group row">
+                    <label for="documentDescription" class="col-sm-4 col-form-label">Description</label>
+                    <textarea id="documentDescription" class="form-control col-sm-8" placeholder="Description"
+                              v-model="document_description"></textarea>
+                </div>
+                <div class="form-group row">
+                    <div class="col col-sm-4"></div>
+                    <input class="btn btn-primary col col-sm-8" type="submit" value="Save">
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <br><br>
+
+    <table class="table table-striped table-bordered">
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Title</th>
+            <th>Author</th>
+            <th>Date</th>
+            <th>Description</th>
+            <th>Actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr v-for="document in documents">
+            <td>{{ document.documentId }}</td>
+            <td>{{ document.title }}</td>
+            <td>{{ document.author }}</td>
+            <td>{{ document.date }}</td>
+            <td>{{ document.description }}</td>
+            <td align="center">
+                <button class="btn btn-primary" v-on:click="editDocument(document)">Изменить</button>
+                <button class="btn btn-danger" v-on:click="deleteDocument(document)">Удалить</button>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<script src="webjars/vue/vue.min.js"></script>
+<script src="webjars/axios/dist/axios.min.js"></script>
+<script>
+    var app = new Vue({
+        el: '#main',
+        data() {
+            return {
+                documents: '',
+                document_id: '',
+                document_title: '',
+                document_author: '',
+                document_date: '',
+                document_description: ''
+            }
+        },
+        mounted() {
+            this.getDocuments();
+        },
+        methods: {
+            getDocuments: function () {
+                console.log('Getting documents ...');
+                axios
+                    .get("/api/v1/documents")
+                    .then(response => this.documents = response.data);
+            },
+            editDocument: function (document) {
+                this.document_id = document.documentId;
+                this.document_title = document.title;
+                this.document_author = document.author;
+                this.document_date = document.date;
+                this.document_description = document.description;
+                document.getElementById('documentForm')
+                    .setAttribute("class", document.getElementById('documentForm')
+                        .getAttribute("class") + " show");
+            },
+            postDocument: function () {
+                if (this.document_id == '' || this.document_id == null) {
+                    axios
+                        .post("/api/v1/add-new-document", {
+                            "documentId": this.document_id,
+                            "title": this.document_title,
+                            "author": this.document_author,
+                            "date": this.document_date,
+                            "description": this.document_description
+                        })
+                        .then(savedDocument => {
+                            this.documents.push(savedDocument.data);
+                            this.document_title = '';
+                            this.document_author = '';
+                            this.document_date = '';
+                            this.document_description = '';
+                        });
+                    console.log('New document added');
+                } else {
+                    axios
+                        .put("/api/v1/update-document/" + this.document_id, {
+                            "documentId": this.document_id,
+                            "title": this.document_title,
+                            "author": this.document_author,
+                            "date": this.document_date,
+                            "description": this.document_description
+                        })
+                        .then(() => {
+                            this.getDocuments();
+                            this.document_id = '';
+                            this.document_title = '';
+                            this.document_author = '';
+                            this.document_date = '';
+                            this.document_description = '';
+                        });
+                }
+            },
+            deleteDocument: async function (document) {
+                await axios
+                    .delete("/api/v1/document/" + document.documentId);
+                this.getDocuments();
+                console.log('Document deleted');
+            }
+        }
+    })
+</script>
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js" integrity="sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV" crossorigin="anonymous"></script>
+</body>
+</html>

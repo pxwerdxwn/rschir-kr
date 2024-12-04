@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
+    <link rel="stylesheet" href="/css/main.css">
+    <meta charset="UTF-8">
+    <title>Departments</title>
+</head>
+<body>
+
+<div th:replace="fragments/header :: header"></div>
+<div th:replace="fragments/page-title :: page-title ('Departments Administrative Page')"></div>
+
+<br><br>
+
+<div class="container" id="main">
+
+    <form v-on:submit.prevent="postDepartment">
+        <div class="card mb-auto">
+            <div aria-controls="departmentForm" aria-expanded="false" class="card-header" data-target="#departmentForm"
+                 data-toggle="collapse" id="formHeader" style="cursor: pointer">
+                <div class="float-left">Новый департамент</div>
+                <div class="float-right">+</div>
+            </div>
+            <div class="card card-body collapse" id="departmentForm">
+                <div class="form-group row">
+                    <label for="departmentName" class="col-sm-4 col-form-label">Department Name</label>
+                    <input id="department_id" type="hidden" v-model="department_id">
+                    <input id="departmentName" class="form-control col-sm-8" placeholder="Department Name" type="text"
+                           v-model="department_name"/>
+                </div>
+                <div class="form-group row">
+                    <label for="departmentHead" class="col-sm-4 col-form-label">Главана депратамента</label>
+                    <input id="departmentHead" class="form-control col-sm-8" placeholder="Department Head" type="text"
+                           v-model="department_head"/>
+                </div>
+                <div class="form-group row">
+                    <label for="departmentDescription" class="col-sm-4 col-form-label">Описание</label>
+                    <textarea id="departmentDescription" class="form-control col-sm-8" placeholder="Description"
+                              v-model="department_description"></textarea>
+                </div>
+                <div class="form-group row">
+                    <div class="col col-sm-4"></div>
+                    <input class="btn btn-primary col col-sm-8" type="submit" value="Save">
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <br><br>
+
+    <table class="table table-striped table-bordered">
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Head</th>
+            <th>Description</th>
+            <th>Actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr v-for="department in departments">
+            <td>{{ department.departmentId }}</td>
+            <td>{{ department.name }}</td>
+            <td>{{ department.head }}</td>
+            <td>{{ department.description }}</td>
+            <td align="center">
+                <button class="btn btn-primary" v-on:click="editDepartment(department)">Изменить</button>
+                <button class="btn btn-danger" v-on:click="deleteDepartment(department)">Удалить</button>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<script src="webjars/vue/vue.min.js"></script>
+<script src="webjars/axios/dist/axios.min.js"></script>
+<script>
+    var app = new Vue({
+        el: '#main',
+        data() {
+            return {
+                departments: '',
+                department_id: '',
+                department_name: '',
+                department_head: '',
+                department_description: ''
+            }
+        },
+        mounted() {
+            this.getDepartments();
+        },
+        methods: {
+            getDepartments: function () {
+                console.log('Getting departments ...');
+                axios
+                    .get("/api/v1/departments")
+                    .then(response => this.departments = response.data);
+            },
+            editDepartment: function (department) {
+                this.department_id = department.departmentId;
+                this.department_name = department.name;
+                this.department_head = department.head;
+                this.department_description = department.description;
+                document.getElementById('departmentForm')
+                    .setAttribute("class", document.getElementById('departmentForm')
+                        .getAttribute("class") + " show");
+            },
+            postDepartment: function () {
+                if (this.department_id == '' || this.department_id == null) {
+                    axios
+                        .post("/api/v1/add-new-department", {
+                            "departmentId": this.department_id,
+                            "name": this.department_name,
+                            "head": this.department_head,
+                            "description": this.department_description
+                        })
+                        .then(savedDepartment => {
+                            this.departments.push(savedDepartment.data);
+                            this.department_name = '';
+                            this.department_head = '';
+                            this.department_description = '';
+                        });
+                    console.log('New department added');
+                } else {
+                    axios
+                        .put("/api/v1/update-department/" + this.department_id, {
+                            "departmentId": this.department_id,
+                            "name": this.department_name,
+                            "head": this.department_head,
+                            "description": this.department_description
+                        })
+                        .then(() => {
+                            this.getDepartments();
+                            this.department_id = '';
+                            this.department_name = '';
+                            this.department_head = '';
+                            this.department_description = '';
+                        });
+                }
+            },
+            deleteDepartment: async function (department) {
+                await axios
+                    .delete("/api/v1/department/" + department.departmentId);
+                this.getDepartments();
+                console.log('Department deleted');
+            }
+        }
+    })
+</script>
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js" integrity="sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV" crossorigin="anonymous"></script>
+</body>
+</html>
